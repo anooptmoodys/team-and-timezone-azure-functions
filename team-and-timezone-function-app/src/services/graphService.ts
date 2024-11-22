@@ -233,4 +233,11 @@ export class GraphService {
         return [...teamMemberDetails, ...customUsersDetails];
     }
 
+    // function to get the users presence based on the users ids passed a string separated by ;
+    async getUsersPresence(userIds: string): Promise<any> {
+        const allUserIds = userIds.split(";").map((id) => id.trim());
+        const presenceData = await this.fetchPresenceData(allUserIds);
+        return presenceData;
+    }
+
 }
