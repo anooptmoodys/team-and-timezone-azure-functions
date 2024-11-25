@@ -1,27 +1,24 @@
 import { app, HttpRequest, HttpResponseInit, InvocationContext } from "@azure/functions";
 import { GraphService } from "../services/graphService";
 
-export async function GetUsersPresence(request: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> {
+// Extract parameters from the request (GET or POST)
+const extractRequestParams = async (req: HttpRequest) => {
+    if (req.method === "POST") {
+        const body: any = await req.json();
+        return {
+            userIds: body.userIds || null
+        };
+    }
+    return {
+        userIds: req.query.get("userIds") || null
+    };
+};
+
+export async function GetUsersPresence(req: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> {
     try {
-        let requestBody: any = {};
-        let userIds: string | null = null;
-        let accessToken: string | null = null;
+        const { userIds } = await extractRequestParams(req);
 
-        if (request.method === 'POST') {
-            requestBody = await request.json();
-            userIds = requestBody.userIds || null;
-            accessToken = requestBody.accessToken || null;
-        }
-
-        if (request.method === 'GET') {
-            userIds = request.query.get('userIds') || null;
-            accessToken = request.query.get('accessToken') || null;
-        }
-
-        // Get user impersonation access token from the request headers
-        const userImpersonationAccessToken = request.headers.get("authorization")?.split(' ')[1];
-
-        const graphService = new GraphService(accessToken, userImpersonationAccessToken);
+        const graphService = new GraphService();
 
         // Get the presence data for the provided user ids
         const presenceData = await graphService.getUsersPresence(userIds);
