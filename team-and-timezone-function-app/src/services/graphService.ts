@@ -198,15 +198,13 @@ export class GraphService {
 
         const mapUserDetails = (user: User) => {
 
-            // location should be officeLocation, city, country
-            const location = [user.officeLocation, user.city, user.country].filter(Boolean).join(", ");
-
             return {
                 id: user.id,
                 name: user.givenName && user.surname ? `${user.givenName} ${user.surname}` : user.displayName || null,
                 mail: user.mail || null,
                 userPrincipalName: user.userPrincipalName || null,
-                location: location || null,
+                city: user.city || null,
+                country: user.country || null,
                 jobTitle: user.jobTitle || null,
                 presence: presenceData[user.id] || null,
                 timeZone: getIanaFromWindows(timezoneData[user.id] ?? "GMT Standard Time"),
