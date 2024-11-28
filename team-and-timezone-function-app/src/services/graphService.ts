@@ -182,9 +182,9 @@ export class GraphService {
         }, {});
     }
 
-    async getTeamMembersDetails(otherUserIds?: string): Promise<TeamMember[]> {
+    async getTeamMembersDetails(otherTeamMemberIds?: string): Promise<TeamMember[]> {
         const teamMembers = await this.fetchDirectReportsOrManagerReports();
-        let customUserIds = otherUserIds ? otherUserIds.split(";").map((id) => id.trim()) : [];
+        let customUserIds = otherTeamMemberIds ? otherTeamMemberIds.split(";").map((id) => id.trim()) : [];
         // if any Id is repeated in both teamMembers and customUserIds, remove it from customUserIds
         customUserIds = customUserIds.filter((id) => !teamMembers.some((user) => user.id === id));
         const allUsers = [...teamMembers];
