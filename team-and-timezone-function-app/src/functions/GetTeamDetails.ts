@@ -12,12 +12,14 @@ const extractRequestParams = async (req: HttpRequest) => {
         const body: any = await req.json();
         return {
             userId: body.userId || null,
-            otherTeamMemberIds: body.otherTeamMemberIds || null
+            otherTeamMemberIds: body.otherTeamMemberIds || null,
+            otherUsersOnly: body.otherUsersOnly || false
         };
     }
     return {
         userId: req.query.get("userId") || null,
-        otherTeamMemberIds: req.query.get("otherTeamMemberIds") || null
+        otherTeamMemberIds: req.query.get("otherTeamMemberIds") || null,
+        otherUsersOnly: req.query.get("otherUsersOnly") || false
     };
 };
 
@@ -65,11 +67,11 @@ const sortTeamMembers = (teamMembers: TeamMember[], id: string | null): TeamMemb
 
 export async function GetTeamDetails(req: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> {
     try {
-        const { userId, otherTeamMemberIds } = await extractRequestParams(req);
+        const { userId, otherTeamMemberIds, otherUsersOnly } = await extractRequestParams(req);
 
         const graphService = new GraphService(userId);
 
-        const teamMembers = await graphService.getTeamMembersDetails(otherTeamMemberIds);
+        const teamMembers = await graphService.getTeamMembersDetails(otherTeamMemberIds, otherUsersOnly);
 
         if (!teamMembers || teamMembers.length === 0) {
             return {

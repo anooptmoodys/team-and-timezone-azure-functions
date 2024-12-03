@@ -9,4 +9,5 @@ export type TeamMember = {
     presence: string;
     timeZone: string;
     photo: string;
+    isOtherTeamMember?: boolean;
 }

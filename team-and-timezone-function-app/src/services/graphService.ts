@@ -182,21 +182,25 @@ export class GraphService {
         }, {});
     }
 
-    async getTeamMembersDetails(otherTeamMemberIds?: string): Promise<TeamMember[]> {
-        const teamMembers = await this.fetchDirectReportsOrManagerReports();
+    async getTeamMembersDetails(otherTeamMemberIds?: string, otherUsersOnly?: boolean): Promise<TeamMember[]> {
+        const teamMembers = otherUsersOnly ? [] : await this.fetchDirectReportsOrManagerReports();
         let customUserIds = otherTeamMemberIds ? otherTeamMemberIds.split(";").map((id) => id.trim()) : [];
-        // if any Id is repeated in both teamMembers and customUserIds, remove it from customUserIds
-        customUserIds = customUserIds.filter((id) => !teamMembers.some((user) => user.id === id));
-        const allUsers = [...teamMembers];
-        const allUserIds = Array.from(new Set([...allUsers.map((user) => user.id), ...customUserIds]));
+        const customUsers = await this.fetchCustomUserDetails(customUserIds);
+        
+        let allUsers: User[] = [...teamMembers, ...customUsers];
+        // make sure allUsers is unique
+        allUsers = allUsers.filter((user, index, self) => self.findIndex((u) => u.id === user.id) === index);
+        const allUserIds = allUsers.map((user) => user.id);
 
-        const [customUsers, presenceData, timezoneData] = await Promise.all([
-            this.fetchCustomUserDetails(customUserIds),
+        const [presenceData, timezoneData] = await Promise.all([
             this.fetchPresenceData(allUserIds),
             this.fetchTimezoneData(allUserIds)
         ]);
 
         const mapUserDetails = (user: User) => {
+
+            // if the user is part of the customUsers list, set isOtherTeamMember to true (not customUserIds)
+            const isOtherTeamMember = customUsers.some((u) => u.id === user.id);
 
             return {
                 id: user.id,
@@ -209,14 +213,13 @@ export class GraphService {
                 presence: presenceData[user.id] || null,
                 timeZone: getIanaFromWindows(timezoneData[user.id] ?? "GMT Standard Time"),
                 photo: `/_layouts/15/userphoto.aspx?size=L&username=${user.userPrincipalName}`,
+                isOtherTeamMember
             };
-        }
-
-        const customUsersDetails = customUsers.map((user: any) => (mapUserDetails(user)));
+        };
 
         const teamMemberDetails = allUsers.map((user) => (mapUserDetails(user)));
 
-        return [...teamMemberDetails, ...customUsersDetails];
+        return teamMemberDetails;
     }
 
      // function to get the users presence based on the users ids passed a string separated by ;
