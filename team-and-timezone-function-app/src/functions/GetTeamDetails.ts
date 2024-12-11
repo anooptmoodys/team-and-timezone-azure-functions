@@ -1,7 +1,8 @@
 import { app, HttpRequest, HttpResponseInit, InvocationContext } from "@azure/functions";
 import { GraphService } from "../services/graphService";
 import { TeamMember } from "../types";
-import { extractUpnFromToken } from "../utils/helpers/common";
+import { validateToken } from "../utils/helpers/tokenHelper";
+import { getErrorResponse } from "../utils/helpers/common";
 
 // Helper to get required environment variables
 const getEnv = (key: string, defaultValue: string = ""): string => process.env[key] || defaultValue;
@@ -23,14 +24,9 @@ const extractRequestParams = async (req: HttpRequest) => {
     };
 };
 
-// Sort team members, prioritizing the current user's id
-const sortTeamMembers = (teamMembers: TeamMember[], id: string | null): TeamMember[] => {
-    if (!id) return teamMembers;
-    return teamMembers.sort((a, b) => {
-        if (a.id === id) return -1;
-        if (b.id === id) return 1;
-        return 0;
-    });
+// function to get team member by id from the team members list
+const getTeamMemberById = (teamMembers: TeamMember[], id: string): TeamMember => {
+    return teamMembers.find(member => member.id === id);
 };
 
 // Sample return data
@@ -67,6 +63,15 @@ const sortTeamMembers = (teamMembers: TeamMember[], id: string | null): TeamMemb
 
 export async function GetTeamDetails(req: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> {
     try {
+
+        // Validate token - by getting the token from the request headers and removing the "Bearer " prefix
+        const token = req.headers.get("Authorization")?.replace("Bearer ", "") || "";
+        const tokenValidationResult = await validateToken(token);
+
+        if (!tokenValidationResult.valid) {
+            return getErrorResponse(401, "Unauthorized", `Token validation failed. Details: ${tokenValidationResult.errorMessage}`);
+        }
+
         const { userId, otherTeamMemberIds, otherUsersOnly } = await extractRequestParams(req);
 
         const graphService = new GraphService(userId);
@@ -74,19 +79,10 @@ export async function GetTeamDetails(req: HttpRequest, context: InvocationContex
         const teamMembers = await graphService.getTeamMembersDetails(otherTeamMemberIds, otherUsersOnly);
 
         if (!teamMembers || teamMembers.length === 0) {
-            return {
-                status: 400,
-                jsonBody: {
-                    status: 400,
-                    error: {
-                        exists: true,
-                        code: "BadRequest",
-                        message: "The request is invalid."
-                    },
-                    data: null
-                }
-            };
+            return getErrorResponse(400, "BadRequest", "The request is invalid.");
         }
+
+        const requestedByUser = getTeamMemberById(teamMembers, userId);
 
         return { 
             status: 200, 
@@ -99,25 +95,14 @@ export async function GetTeamDetails(req: HttpRequest, context: InvocationContex
                 },
                 data: {
                     team: {
-                        name: "Team A",
+                        name: requestedByUser?.department || null,
                         members: teamMembers
                     }
                 }
             }
         }
     } catch (error) {
-        return { 
-            status: 500,
-            jsonBody: {
-                status: 500,
-                error: {
-                    exists: true,
-                    code: "InternalServerError",
-                    message: error.message
-                },
-                data: null
-            }
-        };
+        return getErrorResponse(500, "InternalServerError", error.message);
     }
 }
 

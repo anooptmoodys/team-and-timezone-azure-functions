@@ -9,5 +9,11 @@ export type TeamMember = {
     presence: string;
     timeZone: string;
     photo: string;
+    department?: string;
     isOtherTeamMember?: boolean;
+}
+
+export type TokenValidationResult = {
+    valid: boolean;
+    errorMessage: string
 }

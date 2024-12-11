@@ -6,7 +6,7 @@ import { getIanaFromWindows } from "../utils/helpers/common";
 
 export class GraphService {
     private appClient: Client;
-    private propertiesToSelectForUser = ["id", "givenName", "surname", "displayName", "mail", "userPrincipalName", "officeLocation", "city", "country", "jobTitle"];
+    private propertiesToSelectForUser = ["id", "givenName", "surname", "displayName", "mail", "userPrincipalName", "officeLocation", "city", "country", "jobTitle", "department"];
 
     constructor(private userId?: string) {
         
@@ -197,7 +197,7 @@ export class GraphService {
             this.fetchTimezoneData(allUserIds)
         ]);
 
-        const mapUserDetails = (user: User) => {
+        const mapUserDetails = (user: User): TeamMember => {
 
             // if the user is part of the customUsers list, set isOtherTeamMember to true (not customUserIds)
             const isOtherTeamMember = customUsers.some((u) => u.id === user.id);
@@ -212,12 +212,13 @@ export class GraphService {
                 jobTitle: user.jobTitle || null,
                 presence: presenceData[user.id] || null,
                 timeZone: getIanaFromWindows(timezoneData[user.id] ?? "GMT Standard Time"),
+                department: user.department || null,
                 photo: `/_layouts/15/userphoto.aspx?size=L&username=${user.userPrincipalName}`,
                 isOtherTeamMember
             };
         };
 
-        const teamMemberDetails = allUsers.map((user) => (mapUserDetails(user)));
+        const teamMemberDetails: TeamMember[] = allUsers.map((user) => (mapUserDetails(user)));
 
         return teamMemberDetails;
     }
