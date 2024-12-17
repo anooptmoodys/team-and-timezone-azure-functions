@@ -10,7 +10,7 @@ export type TeamMember = {
     timeZone: string;
     photo: string;
     department?: string;
-    isOtherTeamMember?: boolean;
+    isCoreTeamMember?: boolean; //needed only for initial load to separate core team members from people working with
 }
 
 export type TokenValidationResult = {

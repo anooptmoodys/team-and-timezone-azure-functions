@@ -1,32 +1,24 @@
 import { app, HttpRequest, HttpResponseInit, InvocationContext } from "@azure/functions";
 import { GraphService } from "../services/graphService";
-import { TeamMember } from "../types";
 import { validateToken } from "../utils/helpers/tokenHelper";
-import { getErrorResponse } from "../utils/helpers/common";
-
-// Helper to get required environment variables
-const getEnv = (key: string, defaultValue: string = ""): string => process.env[key] || defaultValue;
+import { getErrorResponse, getMockData } from "../utils/helpers/common";
 
 // Extract parameters from the request (GET or POST)
-const extractRequestParams = async (req: HttpRequest) => {
+const extractRequestParams = async (req: HttpRequest, paramNames: string[]) => {
+    const params: { [key: string]: any } = {};
+
     if (req.method === "POST") {
         const body: any = await req.json();
-        return {
-            userId: body.userId || null,
-            otherTeamMemberIds: body.otherTeamMemberIds || null,
-            otherUsersOnly: body.otherUsersOnly || false
-        };
+        paramNames.forEach(param => {
+            params[param] = body[param] || null;
+        });
+    } else {
+        paramNames.forEach(param => {
+            params[param] = req.query.get(param) || null;
+        });
     }
-    return {
-        userId: req.query.get("userId") || null,
-        otherTeamMemberIds: req.query.get("otherTeamMemberIds") || null,
-        otherUsersOnly: req.query.get("otherUsersOnly") || false
-    };
-};
 
-// function to get team member by id from the team members list
-const getTeamMemberById = (teamMembers: TeamMember[], id: string): TeamMember => {
-    return teamMembers.find(member => member.id === id);
+    return params;
 };
 
 // Sample return data
@@ -65,25 +57,24 @@ export async function GetTeamDetails(req: HttpRequest, context: InvocationContex
     try {
 
         // Validate token - by getting the token from the request headers and removing the "Bearer " prefix
-        const token = req.headers.get("Authorization")?.replace("Bearer ", "") || "";
+        /* const token = req.headers.get("Authorization")?.replace("Bearer ", "") || "";
         const tokenValidationResult = await validateToken(token);
 
         if (!tokenValidationResult.valid) {
             return getErrorResponse(401, "Unauthorized", `Token validation failed. Details: ${tokenValidationResult.errorMessage}`);
-        }
+        } */
 
-        const { userId, otherTeamMemberIds, otherUsersOnly } = await extractRequestParams(req);
+        const { userId, teamMembersIds } = await extractRequestParams(req, ["userId", "teamMembersIds"]);
 
         const graphService = new GraphService(userId);
 
-        const teamMembers = await graphService.getTeamMembersDetails(otherTeamMemberIds, otherUsersOnly);
+        // const teamMembers = teamMembersIds ? await graphService.getTeamMembersDetailsByIds(teamMembersIds) : await graphService.getTeamMembersDetails();
+        const teamMembers = teamMembersIds ? await graphService.getTeamMembersDetailsByIds(teamMembersIds) : getMockData();
 
         if (!teamMembers || teamMembers.length === 0) {
             return getErrorResponse(400, "BadRequest", "The request is invalid.");
         }
-
-        const requestedByUser = getTeamMemberById(teamMembers, userId);
-
+        
         return { 
             status: 200, 
             jsonBody: {
@@ -95,7 +86,7 @@ export async function GetTeamDetails(req: HttpRequest, context: InvocationContex
                 },
                 data: {
                     team: {
-                        name: requestedByUser?.department || null,
+                        name: null,
                         members: teamMembers
                     }
                 }
