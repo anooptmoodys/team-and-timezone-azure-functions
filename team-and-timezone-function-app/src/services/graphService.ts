@@ -106,6 +106,7 @@ export class GraphService {
             const peopleWorkingWithResponse = await this.appClient
                 .api(`/users/${this.userId}/people`)
                 .select(["id"])
+                .top(5)
                 .get();
 
             return peopleWorkingWithResponse?.value || [];
@@ -163,13 +164,14 @@ export class GraphService {
         }];
 
         const appBatchResponse = await this.appClient.api("/$batch").post({ requests: appBatchRequests });
+        
+        const presenceResponse = appBatchResponse.responses.find((r: any) => r.id === "presence");
 
-        // if appBatchResponse.status is not 200, return empty object
-        if (appBatchResponse.status !== 200) {
+        if (presenceResponse.status !== 200) {
             return {};
         }
 
-        const presenceResponse = appBatchResponse.responses.find((r: any) => r.id === "presence");
+        console.log("Presence response:", presenceResponse);
 
         return presenceResponse?.body?.value?.reduce((acc: any, item: any) => {
             acc[item.id] = item.availability;
@@ -206,9 +208,11 @@ export class GraphService {
         const allTeamMemberIds = teamMemberIds.split(";").map((id) => id.trim());
         const allTeamMembers = await this.fetchUsersByIds(allTeamMemberIds);
 
+        const allTeamMembersGUIDs = allTeamMembers.map((user) => user.id);
+
         const [presenceData, timezoneData] = await Promise.all([
-            this.fetchPresenceData(allTeamMemberIds),
-            this.fetchTimezoneData(allTeamMemberIds)
+            this.fetchPresenceData(allTeamMembersGUIDs),
+            this.fetchTimezoneData(allTeamMembersGUIDs)
         ]);
 
         const teamMemberDetails: TeamMember[] = allTeamMembers.map((teamMember) => (mapTeamMemberDetails(teamMember, presenceData, timezoneData)));
@@ -269,9 +273,11 @@ export class GraphService {
     } */
 
     // function to get the users presence based on the users ids passed a string separated by ;
-    async getUsersPresence(userIds: string): Promise<any> {
-        const allUserIds = userIds.split(";").map((id) => id.trim());
-        const presenceData = await this.fetchPresenceData(allUserIds);
+    async getUsersPresence(teamMembersIds: string): Promise<any> {
+        const allTeamMembersIds = teamMembersIds.split(";").map((id) => id.trim());
+        const allTeamMembers = await this.fetchUsersByIds(allTeamMembersIds);
+        const allTeamMembersGUIDs = allTeamMembers.map((user) => user.id);
+        const presenceData = await this.fetchPresenceData(allTeamMembersGUIDs);
         return presenceData;
     }
 }

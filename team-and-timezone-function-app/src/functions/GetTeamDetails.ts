@@ -1,25 +1,7 @@
 import { app, HttpRequest, HttpResponseInit, InvocationContext } from "@azure/functions";
 import { GraphService } from "../services/graphService";
 import { validateToken } from "../utils/helpers/tokenHelper";
-import { getErrorResponse, getMockData } from "../utils/helpers/common";
-
-// Extract parameters from the request (GET or POST)
-const extractRequestParams = async (req: HttpRequest, paramNames: string[]) => {
-    const params: { [key: string]: any } = {};
-
-    if (req.method === "POST") {
-        const body: any = await req.json();
-        paramNames.forEach(param => {
-            params[param] = body[param] || null;
-        });
-    } else {
-        paramNames.forEach(param => {
-            params[param] = req.query.get(param) || null;
-        });
-    }
-
-    return params;
-};
+import { getErrorResponse, getMockData, extractRequestParams } from "../utils/helpers/common";
 
 // Sample return data
 

@@ -1,3 +1,4 @@
+import { HttpRequest } from "@azure/functions/types/http";
 import { findIana } from "windows-iana";
 
 // function to get the IANA time zone from the Windows time zone
@@ -24,6 +25,23 @@ export function getErrorResponse(status: number, code: string, message: string):
         }
     };
 }
+
+export const extractRequestParams = async (req: HttpRequest, paramNames: string[]) => {
+    const params: { [key: string]: any } = {};
+
+    if (req.method === "POST") {
+        const body: any = await req.json();
+        paramNames.forEach(param => {
+            params[param] = body[param] || null;
+        });
+    } else {
+        paramNames.forEach(param => {
+            params[param] = req.query.get(param) || null;
+        });
+    }
+
+    return params;
+};
 
 // function get mock data
 export function getMockData(): any {
