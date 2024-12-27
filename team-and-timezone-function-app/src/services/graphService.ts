@@ -246,38 +246,17 @@ export class GraphService {
         return teamMembersDetails;
     }
 
-    /* async getTeamMembersDetails(otherTeamMemberIds?: string, otherUsersOnly?: boolean): Promise<TeamMember[]> {
-        const teamMembers = otherUsersOnly ? [] : await this.fetchDirectReportsOrManagerReports();
-        let customUserIds = otherTeamMemberIds ? otherTeamMemberIds.split(";").map((id) => id.trim()) : [];
-        const customUsers = await this.fetchUsersByIds(customUserIds);
-
-        let allUsers: User[] = [...teamMembers, ...customUsers];
-        // make sure allUsers is unique
-        allUsers = allUsers.filter((user, index, self) => self.findIndex((u) => u.id === user.id) === index);
-        const allUserIds = allUsers.map((user) => user.id);
-
-        const [presenceData, timezoneData] = await Promise.all([
-            this.fetchPresenceData(allUserIds),
-            this.fetchTimezoneData(allUserIds)
-        ]);
-
-        const mappedTeamMembersDetails = allUsers.map((user) => (mapTeamMemberDetails(user, presenceData, timezoneData)));
-
-        // add isOtherTeamMember property to the team members
-        const teamMembersDetails: TeamMember[] = mappedTeamMembersDetails.map((teamMember) => ({
-            ...teamMember,
-            isOtherTeamMember: customUsers.some((u) => u.id === teamMember.id)
-        }));
-
-        return teamMembersDetails;
-    } */
-
     // function to get the users presence based on the users ids passed a string separated by ;
     async getUsersPresence(teamMembersIds: string): Promise<any> {
-        const allTeamMembersIds = teamMembersIds.split(";").map((id) => id.trim());
-        const allTeamMembers = await this.fetchUsersByIds(allTeamMembersIds);
-        const allTeamMembersGUIDs = allTeamMembers.map((user) => user.id);
-        const presenceData = await this.fetchPresenceData(allTeamMembersGUIDs);
+        let allTeamMembersIds = teamMembersIds.split(";").map((id) => id.trim());
+
+        // if any of the allTeamMembersIds is of email format, then call fetchUsersByIds to get the user ids else use the allTeamMembersIds
+        // todo: change this to call fetchUsersByIds for only those ids which are email format
+        if (allTeamMembersIds.some((id) => id.includes("@"))) {
+            const allTeamMembers = await this.fetchUsersByIds(allTeamMembersIds);
+            allTeamMembersIds = allTeamMembers.map((user) => user.id);
+        }
+        const presenceData = await this.fetchPresenceData(allTeamMembersIds);
         return presenceData;
     }
 }
